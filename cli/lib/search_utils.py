@@ -5,11 +5,16 @@ import string
 from typing import Any
 
 from nltk.stem import PorterStemmer
-from .stop_words import get_stop_words
 
 root = pathlib.Path.cwd()
 movies_dataset = root / "data" / "movies.json" 
 DEFAULT_SEARCH_LIMIT = 5
+
+def get_stop_words() -> list[str]:
+    with open(movies_dataset) as file:
+        text = file.read()
+        words = text.splitlines()
+        return words
 
 def get_movies() -> dict:
     with open(movies_dataset,"r") as file:

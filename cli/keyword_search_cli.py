@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-from lib.InvertedIndex import BM25_B, BM25_K1
+from lib.keyword_search import BM25_B, BM25_K1
 from lib.keyword_search import bm25_idf_command, bm25_search_command, bm25_tf_command, idf_command, search_command, build_command, tf_command, tfidf_command
 
 
