@@ -280,7 +280,10 @@ def chunk_text(text:str,chunk_size:int,overlap:int,splitter: Callable[[str], lis
         chunk_parts = split_result[start : start + chunk_size]
         if chunks and len(chunk_parts) <= overlap:
             break
-        chunks.append(" ".join(chunk_parts))
+        content = " ".join(chunk_parts).strip()
+        if not chunk_parts:
+            continue
+        chunks.append(content)
         start += chunk_size - overlap
     return chunks
 
@@ -289,7 +292,12 @@ def word_splitter(text:str) -> list[str]:
     return result
 
 def sentence_splitter(text:str) -> list[str]:
+    text = text.strip()
+    if not text:
+        return []
     result = re.split(r"(?<=[.!?])\s+",text)
+    if len(result) == 1 and not text.endswith((".", "!", "?")):
+        result = [text]
     return result
 
 
