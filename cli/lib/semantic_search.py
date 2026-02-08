@@ -1,15 +1,11 @@
-from collections import defaultdict
-import enum
 import json
 import pathlib
 import re
-from nltk.corpus.reader import documents
 import numpy as np
 
 from sentence_transformers import SentenceTransformer
 from typing import Any, Callable
 
-from sentence_transformers.util import semantic_search
 
 from .search_utils import format_search_result, get_movies
 
