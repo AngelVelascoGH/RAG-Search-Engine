@@ -1,2 +1,2 @@
 # RAG Search Engine
-A Retrieval-Augmented Generation search engine for a movies dataset.
+A Retrieval-Augmented Generation search engine for a movie dataset.
