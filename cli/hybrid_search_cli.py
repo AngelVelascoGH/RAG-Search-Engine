@@ -18,6 +18,9 @@ def main() -> None:
     rff_search_command.add_argument("query",type=str,help="query to search")
     rff_search_command.add_argument("-k",type=int, default=60,help="k for RFF")
     rff_search_command.add_argument("--limit",type=int, default=5,help="search limit")
+    rff_search_command.add_argument("--enhance",type=str, choices=["spell","rewrite","expand"], help="Query enhancment method")
+    rff_search_command.add_argument("--rerank-method",type=str, choices=["individual"], help="Rerank method")
+
     
 
 
@@ -32,7 +35,7 @@ def main() -> None:
             hybrid_search(args.query,args.alpha,args.limit)
 
         case "rrf-search":
-            rrf_search(args.query,args.k,args.limit)
+            rrf_search(args.query,args.k,args.limit,args.enhance,args.rerank_method)
 
         case _:
             parser.print_help()

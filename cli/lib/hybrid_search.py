@@ -1,6 +1,14 @@
 import os
+import string
+from time import sleep
 
-from .search_utils import RFF_K, format_search_result, get_movies
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+from .llm_prompts import LLM_SYSTEM_INSTRUCTION_EXPAND, LLM_SYSTEM_INSTRUCTION_REWRITE, LLM_SYSTEM_INSTRUCTION_SPELL, LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
+
+from .search_utils import  RFF_K, format_search_result, get_movies
 
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
@@ -16,6 +24,11 @@ class HybridSearch:
         if not os.path.exists(self.idx.index_path):
             self.idx.build()
             self.idx.save()
+
+        load_dotenv()
+        api_key = os.environ.get("GEMINI_API_KEY")
+        self.ai_client = genai.Client(api_key=api_key)
+        self.model = "gemini-2.5-flash"
 
     def _bm25_search(self, query, limit):
         self.idx.load()
@@ -100,7 +113,7 @@ def reciprocal_rank_fusion(
             rrf_scores[doc_id] = {
                 "title": result["title"],
                 "document": result["document"],
-                "rff_score": 0.0,
+                "rrf_score": 0.0,
                 "bm25_rank": None,
                 "semantic_rank":None,
             }
@@ -140,15 +153,77 @@ def hybrid_search(query:str,alpha:float,limit:int) -> None:
         print(f"BM25: {r["bm_score"]:.4f}, Semantic: {r["sem_score"]:.4f}")
         print(f"{r["document"]["title"][:100]}...")
 
-def rrf_search(query:str,k:int,limit:int) -> None:
+def rrf_search(query:str,k:int,limit:int,enhance:str,rerank:str) -> None:
     movies = get_movies()
     hybrid_search = HybridSearch(movies["movies"])
+    
+    query = enhanceQuery(hybrid_search,query,enhance)
+    
 
     res = hybrid_search.rrf_search(query,k,limit)
+
+    if rerank:
+        res = rerank_results(hybrid_search,query,res,rerank)
+        res = sorted(res,key= lambda x: x["metadata"]["llm_score"], reverse=True)
 
     for i,r in enumerate(res,1):
         metadata = r["metadata"]
         print(f"{i}. {r["title"]}")
+        if rerank:
+            print(f"Rerank Score: {metadata["llm_score"]}/10")
         print(f"RRF Score: {metadata["rrf_score"]:.4f}")
         print(f"BM25 Rank: {metadata["bm25_rank"]}, Semantic Rank: {metadata["semantic_rank"]}")
         print(f"{r["document"][:100]}...")
+
+
+def enhanceQuery(hybrid_search: HybridSearch, query: str, operation:str) -> str:
+    if not operation:
+        return query
+
+    system_prompt = ""
+    
+    match operation:
+        case "spell":
+            system_prompt = LLM_SYSTEM_INSTRUCTION_SPELL
+        case "rewrite":
+            system_prompt = LLM_SYSTEM_INSTRUCTION_REWRITE
+        case "expand":
+            system_prompt = LLM_SYSTEM_INSTRUCTION_EXPAND
+
+
+    response = hybrid_search.ai_client.models.generate_content(
+        model=hybrid_search.model,
+        contents=query,
+        config=types.GenerateContentConfig(
+        system_instruction=system_prompt
+        )
+    )
+    if response.text is not None:
+        print(f"Enhanced query ({operation}): '{query}' -> '{response.text}'\n")
+        return response.text
+    else:
+        print(f"Query could not be enhanced, error with Gemini API")
+        return query
+
+
+def rerank_results(hybrid_search: HybridSearch, query: str, results: list[dict], rerank: str) -> list[dict]:
+    for res in results:
+        new_rank = 0
+        response = hybrid_search.ai_client.models.generate_content(
+            model=hybrid_search.model,
+            contents=f"Movie: {res["title"]}, Query: {query}",
+            config=types.GenerateContentConfig(
+                system_instruction=LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
+            )
+        )
+        assert response.text is not None
+        try:
+            new_rank = int(response.text)
+        except ValueError:
+            print(f"Different than a num: {response.text}")
+            new_rank = res["score"]
+    
+        res["metadata"]["llm_score"] = new_rank
+        #to avoid rate limit on individual ranks
+        sleep(1)
+    return results
