@@ -1,3 +1,4 @@
+import json
 import os
 import string
 from time import sleep
@@ -6,9 +7,11 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from .llm_prompts import LLM_SYSTEM_INSTRUCTION_EXPAND, LLM_SYSTEM_INSTRUCTION_REWRITE, LLM_SYSTEM_INSTRUCTION_SPELL, LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
+from .reranking import llm_rerank
 
-from .search_utils import  RFF_K, format_search_result, get_movies
+from .llm_prompts import LLM_SYSTEM_INSTRUCTION_EXPAND, LLM_SYSTEM_INSTRUCTION_REWRITE, LLM_SYSTEM_INSTRUCTION_SPELL
+
+from .search_utils import  RFF_K, SEARCH_MULTIPLIER, format_search_result, get_movies
 
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
@@ -159,18 +162,17 @@ def rrf_search(query:str,k:int,limit:int,enhance:str,rerank:str) -> None:
     
     query = enhanceQuery(hybrid_search,query,enhance)
     
-
-    res = hybrid_search.rrf_search(query,k,limit)
+    search_limit = limit * SEARCH_MULTIPLIER if rerank else limit
+    res = hybrid_search.rrf_search(query,k,search_limit)
 
     if rerank:
-        res = rerank_results(hybrid_search,query,res,rerank)
-        res = sorted(res,key= lambda x: x["metadata"]["llm_score"], reverse=True)
+        res = llm_rerank(query,res,rerank,limit)
 
     for i,r in enumerate(res,1):
         metadata = r["metadata"]
         print(f"{i}. {r["title"]}")
         if rerank:
-            print(f"Rerank Score: {metadata["llm_score"]}/10")
+            print(f"Rerank Score: {metadata["llm_score"]}")
         print(f"RRF Score: {metadata["rrf_score"]:.4f}")
         print(f"BM25 Rank: {metadata["bm25_rank"]}, Semantic Rank: {metadata["semantic_rank"]}")
         print(f"{r["document"][:100]}...")
@@ -206,24 +208,3 @@ def enhanceQuery(hybrid_search: HybridSearch, query: str, operation:str) -> str:
         return query
 
 
-def rerank_results(hybrid_search: HybridSearch, query: str, results: list[dict], rerank: str) -> list[dict]:
-    for res in results:
-        new_rank = 0
-        response = hybrid_search.ai_client.models.generate_content(
-            model=hybrid_search.model,
-            contents=f"Movie: {res["title"]}, Query: {query}",
-            config=types.GenerateContentConfig(
-                system_instruction=LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
-            )
-        )
-        assert response.text is not None
-        try:
-            new_rank = int(response.text)
-        except ValueError:
-            print(f"Different than a num: {response.text}")
-            new_rank = res["score"]
-    
-        res["metadata"]["llm_score"] = new_rank
-        #to avoid rate limit on individual ranks
-        sleep(1)
-    return results

@@ -47,3 +47,10 @@ Consider:
 Rate 0-10 (10 = perfect match).
 Give me ONLY the number in your response, no other text or explanation.
 """
+
+LLM_SYSTEM_INSTRUCTION_RERANK_BATCH = """
+Rank This list of movies by relevance to the search query
+Return ONLY the IDs in order of relevance (best match first). Return a valid JSON list, nothing else. For example:
+
+[75, 12, 34, 2, 1]
+"""
