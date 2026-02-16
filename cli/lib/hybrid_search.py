@@ -160,19 +160,24 @@ def rrf_search(query:str,k:int,limit:int,enhance:str,rerank:str) -> None:
     movies = get_movies()
     hybrid_search = HybridSearch(movies["movies"])
     
+    print(f"LOG- original query {query}")
     query = enhanceQuery(hybrid_search,query,enhance)
+    print(f"LOG- enhanced query {query}")
     
     search_limit = limit * SEARCH_MULTIPLIER if rerank else limit
     res = hybrid_search.rrf_search(query,k,search_limit)
+    print(f"LOG- results query {", ".join([f"{r['title']} sem={r['metadata']['semantic_rank']} key={r['metadata']['bm25_rank']}" for r in res])}")
 
     if rerank:
         res = llm_rerank(query,res,rerank,limit)
+
+    print(f"LOG- reranked query {", ".join([r["title"] for r in res])}")
 
     for i,r in enumerate(res,1):
         metadata = r["metadata"]
         print(f"{i}. {r["title"]}")
         if rerank:
-            print(f"Rerank Score: {metadata["llm_score"]}")
+            print(f"Rerank Score: {metadata["rerank_score"]}")
         print(f"RRF Score: {metadata["rrf_score"]:.4f}")
         print(f"BM25 Rank: {metadata["bm25_rank"]}, Semantic Rank: {metadata["semantic_rank"]}")
         print(f"{r["document"][:100]}...")

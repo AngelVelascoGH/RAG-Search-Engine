@@ -4,6 +4,7 @@ from time import sleep
 
 from dotenv import load_dotenv
 from google import genai
+from sentence_transformers import CrossEncoder
 
 from .llm_prompts import LLM_SYSTEM_INSTRUCTION_RERANK_BATCH, LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
 
@@ -30,10 +31,10 @@ def llm_rerank_individual(query: str, documents: list[dict], limit: int = 5) -> 
             print(f"Different than a num: {response.text}")
             new_rank = res["score"]
     
-        res["metadata"]["llm_score"] = new_rank
+        res["metadata"]["rerank_score"] = new_rank
         #to avoid rate limit on individual ranks
         sleep(1)
-    results = sorted(documents,key= lambda x: x["metadata"]["llm_score"], reverse=True)
+    results = sorted(documents,key= lambda x: x["metadata"]["rerank_score"], reverse=True)
     return results
 
 def llm_rerank_batch(query:str, documents: list[dict], limit: int = 5) -> list[dict]:
@@ -67,13 +68,33 @@ def llm_rerank_batch(query:str, documents: list[dict], limit: int = 5) -> list[d
     for i, doc_id in enumerate(parsed_reranked_ids,1):
         if doc_id in doc_map:
             doc = {**doc_map[doc_id]}
-            doc["metadata"]["llm_score"] = i
+            doc["metadata"]["rerank_score"] = i
             reranked.append(doc)
 
     return reranked[:limit]
 
+def cross_encoder(query:str, documents: list[dict], limit: int = 5) -> list[dict]:
+    pairs = []
+    for doc in documents:
+        pairs.append([query, f"{doc.get("title","")} - {doc.get("document","")}"])
+
+    cross_encoder = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
+    scores = cross_encoder.predict(pairs)
+
+    for i,doc in enumerate(documents):
+        doc["metadata"]["rerank_score"] = scores[i]
+
+    documents = sorted(documents,key=lambda x: x["metadata"]["rerank_score"], reverse=True)
+
+        
+
+    return documents[:limit]
+    
 def llm_rerank(query:str, documents: list[dict], method: str = "batch", limit: int = 5) -> list[dict]:
-    if method == "individual":
-        return llm_rerank_individual(query,documents,limit)
-    else:
-        return llm_rerank_batch(query,documents,limit)
+    match method:
+        case "individual":
+            return llm_rerank_individual(query,documents,limit)
+        case "batch":
+            return llm_rerank_batch(query,documents,limit)
+        case _:
+            return cross_encoder(query,documents,limit)

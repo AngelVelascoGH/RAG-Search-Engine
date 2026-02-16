@@ -19,7 +19,7 @@ def main() -> None:
     rff_search_command.add_argument("-k",type=int, default=60,help="k for RFF")
     rff_search_command.add_argument("--limit",type=int, default=5,help="search limit")
     rff_search_command.add_argument("--enhance",type=str, choices=["spell","rewrite","expand"], help="Query enhancment method")
-    rff_search_command.add_argument("--rerank-method",type=str, choices=["individual","batch"], help="Rerank method")
+    rff_search_command.add_argument("--rerank-method",type=str, choices=["individual","batch","cross_encoder"], help="Rerank method")
 
     
 
