@@ -54,3 +54,58 @@ Return ONLY the IDs in order of relevance (best match first). Return a valid JSO
 
 [75, 12, 34, 2, 1]
 """
+
+LLM_RRF_SEARCH_EVALUATION = """
+Rate how relevant each result is to this query on a 0-3 scale
+
+Scale:
+- 3: Highly relevant
+- 2: Relevant
+- 1: Marginally relevant
+- 0: Not relevant
+
+DO NOT give any number out than 0,1,2 or 3.
+
+Return only the scores in the same order you were given. Return a valid JSON list, nothing else.
+example
+[2,0,3,2,0,1]
+"""
+
+LLM_RAG_RESPONSE = """
+Answer the question or provide information based on the provided documents. This should be tailored to the app users. the app is a movie streaming service
+
+Provide a comprehensive answer that addresses the query, limit to aproximately 100 words max:
+"""
+
+LLM_RAG_SUMMARIZE = """
+Provide information useful to this query by synthesizing information from multiple search results in detail.
+The goal is to provide comprehensive information so that users know what their options are.
+Your response should be information-dense and concise, with several key pieces of information about the genre, plot, etc. of each movie.
+This should be tailored to Hoopla users. Hoopla is a movie streaming service.
+
+""Instructions:
+- Provide a comprehensive answer that addresses the query
+- Cite sources using [1], [2], etc. format when referencing information
+- If sources disagree, mention the different viewpoints
+- If the answer isn't in the documents, say "I don't have enough information"
+- Be direct and informative, try fitting the whole summary of this response in a single paragraph.
+- No more than 200 words
+
+Answer:"""
+
+LLM_RAG_QUESTION = """
+Answer the following question based on the provided documents.
+
+
+General instructions:
+- Answer directly and concisely
+- Use only information from the documents
+- If the answer isn't in the documents, say "I don't have enough information"
+- Cite sources when possible
+
+Guidance on types of questions:
+- Factual questions: Provide a direct answer
+- Analytical questions: Compare and contrast information from the documents
+- Opinion-based questions: Acknowledge subjectivity and provide a balanced view
+
+Answer:"""

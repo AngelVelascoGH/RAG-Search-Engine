@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from google import genai
 from sentence_transformers import CrossEncoder
 
-from .llm_prompts import LLM_SYSTEM_INSTRUCTION_RERANK_BATCH, LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
+from .llm_prompts import LLM_RRF_SEARCH_EVALUATION, LLM_SYSTEM_INSTRUCTION_RERANK_BATCH, LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
 
 
 load_dotenv()
@@ -98,3 +98,24 @@ def llm_rerank(query:str, documents: list[dict], method: str = "batch", limit: i
             return llm_rerank_batch(query,documents,limit)
         case _:
             return cross_encoder(query,documents,limit)
+
+
+def llm_evaluate_ranks(query : str, results : list[dict]) -> None:
+    results_to_prompt = [f"{res["title"]} - {res["document"][:200]}" for res in results]
+    prompt = f"Query: {query}\n{"\n".join(results_to_prompt)}"
+
+    llm_response = client.models.generate_content(
+        contents=prompt,
+        model=model,
+        config=genai.types.GenerateContentConfig(
+            system_instruction=LLM_RRF_SEARCH_EVALUATION
+        )
+    )
+
+    
+    assert llm_response.text is not None
+
+    llm_evaluation = json.loads(llm_response.text)
+
+    for i,result in enumerate(results,1):
+        print(f"{i}. {result["title"]}: {llm_evaluation[i-1]}/3")

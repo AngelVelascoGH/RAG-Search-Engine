@@ -1,10 +1,17 @@
+import json
+import os
+from dotenv import load_dotenv
+
+from google import genai
 
 from .hybrid_search import HybridSearch
-
-
 from .semantic_search import SemanticSearch
 from .search_utils import load_golden_dataset, load_movies
 
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key)
+model = "gemini-2.5-flash"
 
 def calculate_precision_and_recall(retrieved_docs: list[str], relevant_docs: set[str], k: int = 5) -> tuple[float,float]:
     top_k = retrieved_docs[:k]
@@ -61,4 +68,3 @@ def evaluate_command(limit: int = 5) -> dict:
         "limit": limit,
         "results": retrieved_results,
     }
-

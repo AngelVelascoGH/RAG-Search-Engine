@@ -1,17 +1,15 @@
-import json
 import os
-import string
-from time import sleep
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from .reranking import llm_rerank
+
+from .reranking import llm_rerank, llm_evaluate_ranks
 
 from .llm_prompts import LLM_SYSTEM_INSTRUCTION_EXPAND, LLM_SYSTEM_INSTRUCTION_REWRITE, LLM_SYSTEM_INSTRUCTION_SPELL
 
-from .search_utils import  RFF_K, SEARCH_MULTIPLIER, format_search_result, get_movies
+from .search_utils import  RRF_K, SEARCH_MULTIPLIER, format_search_result, get_movies
 
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
@@ -87,11 +85,11 @@ def normalize_scores(scores: list[float]) -> list[float]:
 
     return results
 
-def rrf_score(rank:int, k:int = RFF_K) -> float:
+def rrf_score(rank:int, k:int = RRF_K) -> float:
     return 1 / (k + rank)
 
 def reciprocal_rank_fusion(
-    bm25_results: list[dict], semantic_results: list[dict], k: int = RFF_K
+    bm25_results: list[dict], semantic_results: list[dict], k: int = RRF_K
 ) -> list[dict]:
     rrf_scores = {}
     
@@ -156,22 +154,18 @@ def hybrid_search(query:str,alpha:float,limit:int) -> None:
         print(f"BM25: {r["bm_score"]:.4f}, Semantic: {r["sem_score"]:.4f}")
         print(f"{r["document"]["title"][:100]}...")
 
-def rrf_search(query:str,k:int,limit:int,enhance:str,rerank:str) -> None:
+def rrf_search(query:str,k:int,limit:int,enhance:str,rerank:str,evaluate: bool) -> None:
     movies = get_movies()
     hybrid_search = HybridSearch(movies["movies"])
     
-    print(f"LOG- original query {query}")
     query = enhanceQuery(hybrid_search,query,enhance)
-    print(f"LOG- enhanced query {query}")
     
     search_limit = limit * SEARCH_MULTIPLIER if rerank else limit
     res = hybrid_search.rrf_search(query,k,search_limit)
-    print(f"LOG- results query {", ".join([f"{r['title']} sem={r['metadata']['semantic_rank']} key={r['metadata']['bm25_rank']}" for r in res])}")
 
     if rerank:
         res = llm_rerank(query,res,rerank,limit)
 
-    print(f"LOG- reranked query {", ".join([r["title"] for r in res])}")
 
     for i,r in enumerate(res,1):
         metadata = r["metadata"]
@@ -181,6 +175,8 @@ def rrf_search(query:str,k:int,limit:int,enhance:str,rerank:str) -> None:
         print(f"RRF Score: {metadata["rrf_score"]:.4f}")
         print(f"BM25 Rank: {metadata["bm25_rank"]}, Semantic Rank: {metadata["semantic_rank"]}")
         print(f"{r["document"][:100]}...")
+
+    llm_evaluate_ranks(query, res)
 
 
 def enhanceQuery(hybrid_search: HybridSearch, query: str, operation:str) -> str:
@@ -211,5 +207,4 @@ def enhanceQuery(hybrid_search: HybridSearch, query: str, operation:str) -> str:
     else:
         print(f"Query could not be enhanced, error with Gemini API")
         return query
-
 
