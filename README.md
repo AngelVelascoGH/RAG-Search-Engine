@@ -48,7 +48,7 @@ uv sync
 ### Usage Examples
 
 ```bash
-uv run cli/augmented_generation_cli.py --query "Funny bear movie"
+uv run cli/augmented_generation_cli.py rag "movies about dinosaours"
 ```
 
 ```bash

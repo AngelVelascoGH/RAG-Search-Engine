@@ -1,3 +1,4 @@
+import sys
 from google.genai import  types
 
 from .llm_prompts import LLM_RAG_QUESTION, LLM_RAG_RESPONSE, LLM_RAG_SUMMARIZE
@@ -19,10 +20,14 @@ def rag_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT, prompt_instructio
             system_instruction=prompt_instruction
         )
     )
-
-    assert response.text is not None
+    if response.text is None:
+        print(f"-- Gemini Content error --")
+        print(response)
+        print("---------------------------")
+        sys.exit(1)
 
     return (results, response.text)
+
 
 
 

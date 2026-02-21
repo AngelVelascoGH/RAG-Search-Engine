@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from time import sleep
 
 from dotenv import load_dotenv
@@ -24,7 +25,13 @@ def llm_rerank_individual(query: str, documents: list[dict], limit: int = 5) -> 
                 system_instruction=LLM_SYSTEM_INSTRUCTION_RERANK_INDIVIDUAL
             )
         )
-        assert response.text is not None
+        if response.text is None:
+
+            print(f"-- Gemini Content error --")
+            print(response)
+            print("---------------------------")
+            sys.exit(1)
+
         try:
             new_rank = int(response.text)
         except ValueError:
@@ -113,7 +120,11 @@ def llm_evaluate_ranks(query : str, results : list[dict]) -> None:
     )
 
     
-    assert llm_response.text is not None
+    if llm_response.text is None:
+        print(f"-- Gemini Content error --")
+        print(llm_response)
+        print("---------------------------")
+        sys.exit(1)
 
     llm_evaluation = json.loads(llm_response.text)
 
