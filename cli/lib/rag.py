@@ -1,4 +1,4 @@
-from google.genai import client, types
+from google.genai import  types
 
 from .llm_prompts import LLM_RAG_QUESTION, LLM_RAG_RESPONSE, LLM_RAG_SUMMARIZE
 from .hybrid_search import HybridSearch

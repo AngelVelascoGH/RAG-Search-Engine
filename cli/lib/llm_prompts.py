@@ -109,3 +109,11 @@ Guidance on types of questions:
 - Opinion-based questions: Acknowledge subjectivity and provide a balanced view
 
 Answer:"""
+
+LLM_IMAGE_ANALYSIS = """
+Given the included image and text query, rewrite the text query to improve search result from a movie database. Make sure to:
+- Synthesize visual and textual information
+- Focus on movie-specific details (actors, scenes, style, etc.)
+- Return only the rewritten query, without any additional commentary.
+- No more than 50 words, be really concise
+"""
